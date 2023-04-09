@@ -1,41 +1,54 @@
-debugger;
+// gets anime titles, replaces title with link to mal
 
 console.log("Running extension");
 
 if (window.location.href.includes('9anime') && window.location.href.includes('/watch')) {
 
-  // get title
-  var anime_title = document.querySelector('h1.title.d-title');
+  var anime_titles_element = document.querySelector('div.names.font-italic.mb-2');
+  var anime_titles_array = anime_titles_element.textContent.split('; ');
+  var matched = false
 
-  // search mal api of title anime
-  const anime_data = searchAnime(anime_title);
+  searchAnime(anime_titles_array[0])
+    .then(results => {
+      console.log(results)
 
-  searchAnime(anime_title)
-  .then(results => {
-    console.log(results)
-    addLinkToTitle(results.url, )
+      if (Array.isArray(results) && results.length >= 1) {
+        for (let i = 0; i < results.length && !matched; i++) {
+          for (let j = 0; j < anime_titles_array.length && !matched; j++) {
+
+            // compare titles
+            if (results[i].title === anime_titles_array[j] || results[i].title_english === anime_titles_array[j]) {
+              if (results[i].year === null) {
+                break;
+              }
+              matched = true;
+              console.log(results[i].url)
+              addLinkToTitle(results[i].url, anime_titles_element)
+            }
+          }
+        }
+      } else {
+        console.log("Lookup yielded no results")
+      }
     }
-  )
-  .catch(error => console.error(error));
+    )
+    .catch(error => console.error(error));
 }
 
-async function searchAnime(title) {
-  const response = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(title.textContent)}`);
+
+async function searchAnime(title_str) {
+  const response = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(title_str)}`);
   const data = await response.json();
-  return data.results;
+  return data.data;
 }
 
-function addLinkToTitle(mal_url, anime_title) {
-    // link creation
-    var link = document.createElement('a');
-    link.href = mal_url;
-    link.textContent = anime_title.textContent;
+function addLinkToTitle(mal_url, anime_title_html_element) {
+  // link creation
+  var link = document.createElement('a');
+  link.href = mal_url;
+  link.textContent = anime_title_html_element.textContent;
 
   // transplant
-  anime_title.textContent = '';
-  anime_title.appendChild(link);
+  anime_title_html_element.textContent = '';
+  anime_title_html_element.appendChild(link);
 }
-
-
-// todo:
-// figure out the response structure and find a way to get the exact url from the search
